@@ -1,0 +1,6 @@
+github.com/google/periph v1.0.0 h1:lfwbPBc7Vz7TDP8QctWytnRKPiWhtjfjA9LeqgCmUjs=
+github.com/google/periph v3.6.4+incompatible h1:oyHlQX7bfxhUCpFqxZFqSmCIG1TMaDaH2XOX1/DXFUM=
+github.com/google/periph v3.6.4+incompatible/go.mod h1:ymRi4Ht9h/i3hUGeUesM5N4RrWNMRfPaQKArxsJSt9E=
+periph.io/x/periph v1.0.0 h1:bwoS1Re14o6WinWbTuZuwX9Yh/5Rco4iNCl/CA+Kca8=
+periph.io/x/periph v3.6.4+incompatible h1:8FyXTbu9lcMVofz8mf+cj1pzTLN4V6EuPY2EF+DoJF4=
+periph.io/x/periph v3.6.4+incompatible/go.mod h1:EWr+FCIU2dBWz5/wSWeiIUJTriYv9v2j2ENBmgYyy7Y=
