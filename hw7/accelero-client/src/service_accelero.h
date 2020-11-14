@@ -10,7 +10,8 @@ class AcceleroService {
   typedef AcceleroService Self;
 
  public:
-  AcceleroService() : _thread(new rtos::Thread), _event_queue(new events::EventQueue) {}
+  AcceleroService()
+      : _thread(new rtos::Thread), _event_queue(new events::EventQueue) {}
 
   int init() {
     ACCELERO_StatusTypeDef accelero_ret = BSP_ACCELERO_Init();
@@ -23,7 +24,8 @@ class AcceleroService {
 
   void start() {
     _event_queue->call_every(30, this, &Self::update_accelero_state);
-    _thread->start(mbed::callback(_event_queue, &events::EventQueue::dispatch_forever));
+    _thread->start(
+        mbed::callback(_event_queue, &events::EventQueue::dispatch_forever));
   }
 
   void join() { _thread->join(); }
