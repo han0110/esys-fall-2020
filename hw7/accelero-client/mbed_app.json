@@ -1,0 +1,28 @@
+{
+    "config": {
+        "wifi-ssid": {
+            "help": "WiFi SSID",
+            "value": "\"TODO:\""
+        },
+        "wifi-password": {
+            "help": "WiFi Password",
+            "value": "\"TODO:\""
+        },
+        "websocket-server-ip": {
+            "help": "WebSocket Server IP",
+            "value": "\"TODO:\""
+        },
+        "websocket-server-port": {
+            "help": "WebSocket Server IP",
+            "value": "8080"
+        }
+    },
+    "target_overrides": {
+        "DISCO_L475VG_IOT01A": {
+            "target.components_add": [
+                "wifi_ism43362"
+            ],
+            "ism43362.provide-default": true
+        }
+    }
+}
