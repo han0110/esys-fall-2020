@@ -8,12 +8,12 @@
             "help": "WiFi Password",
             "value": "\"TODO:\""
         },
-        "websocket-server-ip": {
-            "help": "WebSocket Server IP",
+        "socket-server-ip": {
+            "help": "Socket Server IP",
             "value": "\"TODO:\""
         },
-        "websocket-server-port": {
-            "help": "WebSocket Server IP",
+        "socket-server-port": {
+            "help": "Socket Server IP",
             "value": "8080"
         }
     },

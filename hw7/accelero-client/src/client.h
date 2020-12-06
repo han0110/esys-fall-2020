@@ -53,8 +53,8 @@ class Client {
         wifi.get_gateway(), wifi.get_rssi());
 
     nsapi_error_t socket_ret;
-    SocketAddress addr(MBED_CONF_APP_WEBSOCKET_SERVER_IP,
-                       MBED_CONF_APP_WEBSOCKET_SERVER_PORT);
+    SocketAddress addr(MBED_CONF_APP_SOCKET_SERVER_IP,
+                       MBED_CONF_APP_SOCKET_SERVER_PORT);
 
     _socket = new TCPSocket;
     socket_ret = _socket->open((NetworkInterface*)&wifi);
