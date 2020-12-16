@@ -1,4 +1,3 @@
-use actix::Message;
 use cpal;
 use hound;
 use serde::{
@@ -12,17 +11,16 @@ use uuid::Uuid;
 pub const WAV_CHUNK_PAYLOAD_SIZE: usize = 512;
 
 #[derive(Serialize, Deserialize)]
-pub enum Audio<T>
+pub enum Audio<S>
 where
-    T: Copy + Default,
+    S: Copy + Default,
 {
     Spec(Spec),
-    WavChunk(WavChunk<T>),
+    WavChunk(WavChunk<S>),
     WavEnd { id: Uuid },
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone, Message)]
-#[rtype(result = "()")]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub struct Spec {
     pub channels: u16,
     pub sample_rate: u32,
@@ -37,28 +35,25 @@ pub enum SampleFormat {
     F32,
 }
 
-#[derive(Serialize, Deserialize, Message)]
-#[rtype(result = "()")]
-pub struct WavChunk<T>
+#[derive(Serialize, Deserialize)]
+pub struct WavChunk<S>
 where
-    T: Copy + Default,
+    S: Copy + Default,
 {
     pub id: Uuid,
     pub seq: u32,
     pub size: u8,
-    pub payload: WavChunkPayload<T>,
+    pub payload: WavChunkPayload<S>,
 }
 
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct WavChunkPayload<T>(pub [T; WAV_CHUNK_PAYLOAD_SIZE]);
+pub struct WavChunkPayload<S>(pub [S; WAV_CHUNK_PAYLOAD_SIZE]);
 
-impl<T> WavChunkPayload<T>
+impl<S> WavChunkPayload<S>
 where
-    T: Default + Copy,
+    S: Default + Copy,
 {
     pub fn default() -> Self {
-        Self([T::default(); WAV_CHUNK_PAYLOAD_SIZE])
+        Self([S::default(); WAV_CHUNK_PAYLOAD_SIZE])
     }
 }
 
@@ -104,13 +99,13 @@ impl From<SampleFormat> for hound::SampleFormat {
     }
 }
 
-impl<T> Serialize for WavChunkPayload<T>
+impl<S> Serialize for WavChunkPayload<S>
 where
-    T: Serialize,
+    S: Serialize,
 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<SE>(&self, serializer: SE) -> Result<SE::Ok, SE::Error>
     where
-        S: Serializer,
+        SE: Serializer,
     {
         let mut seq = serializer.serialize_tuple(self.0.len())?;
         for e in &self.0[..] {
@@ -120,33 +115,33 @@ where
     }
 }
 
-impl<'de, T> Deserialize<'de> for WavChunkPayload<T>
+impl<'de, S> Deserialize<'de> for WavChunkPayload<S>
 where
-    T: Default + Copy + Deserialize<'de>,
+    S: Default + Copy + Deserialize<'de>,
 {
-    fn deserialize<D>(deserializer: D) -> Result<WavChunkPayload<T>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<WavChunkPayload<S>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ArrayVisitor<T> {
-            element: std::marker::PhantomData<T>,
+        struct ArrayVisitor<S> {
+            element: std::marker::PhantomData<S>,
         }
 
-        impl<'de, T> Visitor<'de> for ArrayVisitor<T>
+        impl<'de, S> Visitor<'de> for ArrayVisitor<S>
         where
-            T: Default + Copy + Deserialize<'de>,
+            S: Default + Copy + Deserialize<'de>,
         {
-            type Value = WavChunkPayload<T>;
+            type Value = WavChunkPayload<S>;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 write!(formatter, "an array of length {}", WAV_CHUNK_PAYLOAD_SIZE)
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<WavChunkPayload<T>, A::Error>
+            fn visit_seq<A>(self, mut seq: A) -> Result<WavChunkPayload<S>, A::Error>
             where
                 A: SeqAccess<'de>,
             {
-                let mut payload = WavChunkPayload::<T>::default();
+                let mut payload = WavChunkPayload::<S>::default();
                 for i in 0..WAV_CHUNK_PAYLOAD_SIZE {
                     payload.0[i] = seq
                         .next_element()?

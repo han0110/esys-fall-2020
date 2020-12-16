@@ -1,4 +1,4 @@
-// Modified from https://github.com/Michael-F-Bryan/noise-gate with MIT license
+// Modified from https://github.com/Michael-F-Bryan/noise-gate with MIT license:
 //
 // Copyright (c) 2019 Michael-F-Bryan <michaelfbryan@gmail.com>
 //
@@ -139,4 +139,32 @@ fn abs<S: SignedSample>(sample: S) -> S {
     } else {
         -sample
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const OPEN_THRESHOLD: i16 = 100;
+    const RELEASE_TIME: usize = 5;
+
+    macro_rules! test_state_transition {
+        ($name:ident: $from:expr, $sample:expr => $expected:expr) => {
+            #[test]
+            fn $name() {
+                let mut noise_gate = NoiseGate::new(OPEN_THRESHOLD, RELEASE_TIME);
+                noise_gate.state = $from;
+                noise_gate.next_state($sample);
+                assert_eq!(noise_gate.state, $expected);
+            }
+        };
+    }
+
+    test_state_transition!(open_to_open: State::Open, 101 => State::Open);
+    test_state_transition!(open_to_closing: State::Open, 40 => State::Closing { remaining_samples: RELEASE_TIME });
+    test_state_transition!(closing_to_closed: State::Closing { remaining_samples: 0 }, 40 => State::Closed);
+    test_state_transition!(closing_to_closing: State::Closing { remaining_samples: 1 }, 40 => State::Closing { remaining_samples: 0 });
+    test_state_transition!(reopen_when_closing: State::Closing { remaining_samples: 1 }, 101 => State::Open);
+    test_state_transition!(closed_to_closed: State::Closed, 40 => State::Closed);
+    test_state_transition!(closed_to_open: State::Closed, 101 => State::Open);
 }

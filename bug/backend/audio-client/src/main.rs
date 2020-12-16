@@ -285,8 +285,10 @@ where
     }
 
     fn end_of_transmission(&mut self) {
-        self.write_payload();
-        self.write_eof();
+        if self.buf_pos != 0 {
+            self.write_payload();
+            self.write_eof();
+        }
     }
 }
 
