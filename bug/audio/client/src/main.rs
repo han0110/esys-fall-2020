@@ -2,7 +2,7 @@ use actix::{
     io::{SinkWrite, WriteHandler},
     Actor, ActorContext, AsyncContext, Context, Running, StreamHandler,
 };
-use actix_rt;
+use actix_rt::signal::unix::{signal, SignalKind};
 use anyhow;
 use audio::{Audio, WavChunk, WavChunkPayload, WAV_CHUNK_PAYLOAD_SIZE};
 use audio_client::noise_gate::{NoiseGate, Sink};
@@ -20,15 +20,12 @@ use std::{
     thread,
 };
 use structopt::StructOpt;
-use tokio::{
-    net::UdpSocket,
-    signal::unix::{signal, SignalKind},
-};
+use tokio::net::UdpSocket;
 use tokio_util::udp::UdpFramed;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, StructOpt)]
-pub struct Args {
+pub struct Config {
     #[structopt(
         long = "threshold",
         default_value = "0.1",
@@ -41,11 +38,17 @@ pub struct Args {
         default_value = "0.5"
     )]
     pub release_time: f32,
+    #[structopt(
+        long = "server-address",
+        help = "the audio server address to send collected audio to in ipv4",
+        default_value = "127.0.0.1:3002"
+    )]
+    pub server_addr: String,
 }
 
 #[actix_rt::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let args = Args::from_args();
+    let args = Config::from_args();
 
     let host = cpal::default_host();
     let device = host.default_input_device().unwrap();
@@ -53,7 +56,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let spec = config.clone().into();
 
-    let server_addr = SocketAddr::new("127.0.0.1".parse().unwrap(), 4000);
+    let server_addr = args.server_addr.parse()?;
     let socket = UdpSocket::bind(SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), 0))
         .await
         .unwrap();
