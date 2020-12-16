@@ -1,5 +1,8 @@
 use crate::{
-    actor::db::Database,
+    actor::{
+        audio_handler::{AudioBytes, AudioHandler},
+        db::Database,
+    },
     signal::{Signal, SignalStream},
 };
 use actix::{
@@ -7,30 +10,27 @@ use actix::{
     Actor, ActorContext, Addr, AsyncContext, Context, Handler, Message, Running, StreamHandler,
 };
 use anyhow::anyhow;
-use audio::{Audio, Spec};
+use audio::Audio;
 use bincode::deserialize;
 use bytes::{Bytes, BytesMut};
 use futures::stream::{SplitSink, StreamExt};
-use hound::WavWriter;
 use std::{
     collections::HashMap,
-    convert::TryInto,
-    fs::{create_dir_all, File},
-    io::{self, BufWriter},
+    fs::create_dir_all,
+    io,
     net::{Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 use tokio::net::UdpSocket;
 use tokio_util::{codec::BytesCodec, udp::UdpFramed};
-use uuid::Uuid;
 
 #[derive(Debug, Clone, StructOpt)]
 pub struct Config {
     #[structopt(
         long = "audio-server-port",
         env = "AUDIO_SERVER_PORT",
-        default_value = "3002",
+        default_value = "3003",
         help = "the port for audio server to listen to"
     )]
     pub audio_server_port: u16,
@@ -76,7 +76,7 @@ pub struct AudioServer {
     wav_directory: PathBuf,
     database_addr: Addr<Database>,
     sink: SinkWrite<UdpSinkItem, UdpSink>,
-    writers: HashMap<SocketAddr, AudioWriter>,
+    writers: HashMap<SocketAddr, Addr<AudioHandler>>,
 }
 
 impl Actor for AudioServer {
@@ -88,7 +88,6 @@ impl Actor for AudioServer {
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
         println!("audio server is stopping");
-        // TODO: Handle unfinished writers
         Running::Stop
     }
 
@@ -105,32 +104,23 @@ impl StreamHandler<UdpStream> for AudioServer {
     fn handle(&mut self, udp_packet: UdpStream, _: &mut Context<Self>) {
         let UdpStream(buf, client_addr) = udp_packet;
         match self.writers.get_mut(&client_addr) {
-            Some(writer) => {
-                match writer.write(buf) {
-                    Err(_) => {
-                        // TODO: Warning
-                    }
-                    Ok(Some(id)) => {
-                        println!("wav stored {}", id);
-                        // TODO: Send InsertLog to database_addr
-                        // TODO: Create AudioProcessor to process audio
-                    }
-                    Ok(None) => {}
-                }
-            }
+            Some(writer) => writer.do_send(AudioBytes(buf)),
             None => match deserialize(&buf[..]) {
                 Ok(Audio::<f32>::Spec(spec)) => {
-                    self.writers.insert(
-                        client_addr,
-                        AudioWriter::new(self.wav_directory.clone(), spec),
-                    );
+                    let writer = AudioHandler::new(
+                        self.wav_directory.clone(),
+                        self.database_addr.clone(),
+                        spec,
+                    )
+                    .start();
+                    self.writers.insert(client_addr, writer);
                 }
                 Ok(_) => {
                     // Send empty packet to request spec of client
                     self.sink.write((Bytes::new(), client_addr));
                 }
                 Err(_) => {
-                    // TODO: Warning
+                    // TODO: warning
                 }
             },
         }
@@ -139,7 +129,7 @@ impl StreamHandler<UdpStream> for AudioServer {
 
 impl WriteHandler<io::Error> for AudioServer {
     fn error(&mut self, _: io::Error, _: &mut Self::Context) -> Running {
-        // TODO: Warning
+        // TODO: warning
         Running::Continue
     }
 }
@@ -150,74 +140,6 @@ impl Handler<Signal> for AudioServer {
     fn handle(&mut self, _: Signal, ctx: &mut Context<Self>) -> Self::Result {
         ctx.stop();
         ()
-    }
-}
-
-struct AudioWriter {
-    wav_directory: PathBuf,
-    spec: Spec,
-    writers: HashMap<Uuid, (u32, WavWriter<BufWriter<File>>)>,
-}
-
-impl AudioWriter {
-    fn new(wav_directory: PathBuf, spec: Spec) -> Self {
-        Self {
-            wav_directory,
-            spec,
-            writers: HashMap::new(),
-        }
-    }
-
-    fn new_writer(&self, id: Uuid) -> anyhow::Result<WavWriter<BufWriter<File>>> {
-        let mut filepath = self.wav_directory.clone();
-        filepath.push(id.to_string());
-        filepath.set_extension("wav");
-        Ok(WavWriter::create(filepath, self.spec.into())?)
-    }
-
-    fn write(&mut self, buf: BytesMut) -> anyhow::Result<Option<Uuid>> {
-        match self.spec.sample_format {
-            audio::SampleFormat::U16 => self.try_write::<u16, i16>(buf),
-            audio::SampleFormat::I16 => self.try_write::<i16, i16>(buf),
-            audio::SampleFormat::F32 => self.try_write::<f32, f32>(buf),
-        }
-    }
-
-    fn try_write<AS, HS>(&mut self, buf: BytesMut) -> anyhow::Result<Option<Uuid>>
-    where
-        AS: Copy + Default + for<'de> serde::de::Deserialize<'de> + TryInto<HS>,
-        HS: hound::Sample,
-    {
-        Ok(match deserialize(&buf[..])? {
-            Audio::WavChunk::<AS>(wav_chunk) => {
-                if !self.writers.contains_key(&wav_chunk.id) {
-                    self.writers
-                        .insert(wav_chunk.id, (0, self.new_writer(wav_chunk.id)?));
-                }
-
-                let (seq, writer) = self.writers.get_mut(&wav_chunk.id).unwrap();
-                if *seq < wav_chunk.seq {
-                    for &sample in &wav_chunk.payload.0[..] {
-                        writer.write_sample(
-                            sample
-                                .try_into()
-                                .map_err(|_| anyhow!("unexpected try_into error"))?,
-                        )?
-                    }
-                    *seq = wav_chunk.seq;
-                }
-
-                println!("wav chunk {} seq {}", wav_chunk.id, seq);
-                None
-            }
-            Audio::WavEnd { id } => {
-                if let Some((_, writer)) = self.writers.remove(&id) {
-                    writer.finalize()?;
-                }
-                Some(id)
-            }
-            _ => None,
-        })
     }
 }
 
@@ -237,8 +159,4 @@ fn bind_udp_socket(port: u16) -> anyhow::Result<UdpSocket> {
     let addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), port);
     let sock = std::net::UdpSocket::bind(addr)?;
     Ok(UdpSocket::from_std(sock)?)
-}
-
-trait Heaviside {
-    fn heaviside(&self) -> i8;
 }
