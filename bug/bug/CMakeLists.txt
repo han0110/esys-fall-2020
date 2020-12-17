@@ -11,10 +11,13 @@ include(${MBED_PATH}/tools/cmake/app.cmake)
 
 add_subdirectory(${MBED_PATH})
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/driver/wifi-ism43362)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/driver/ntp-client)
 
 add_executable(${APP_TARGET})
 
-mbed_configure_app_target(${APP_TARGET})
+target_compile_features(${APP_TARGET}
+    PRIVATE cxx_std_17
+)
 
 mbed_set_mbed_target_linker_script(${APP_TARGET})
 
@@ -23,6 +26,7 @@ project(${APP_TARGET})
 # Provide Mbed OS with the header file it needs to configure Mbed TLS for LoRa
 target_include_directories(${APP_TARGET}
     PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/driver
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -37,6 +41,7 @@ target_link_libraries(${APP_TARGET}
         mbed-os
         mbed-netsocket
         wifi-ism43362
+        ntp-client
 )
 
 mbed_set_post_build(${APP_TARGET})
