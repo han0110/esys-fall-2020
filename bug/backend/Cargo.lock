@@ -469,6 +469,7 @@ dependencies = [
  "bytes",
  "diesel",
  "diesel-derive-enum",
+ "event",
  "futures",
  "hound",
  "num_cpus",
@@ -1112,6 +1113,17 @@ checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
 dependencies = [
  "backtrace",
  "version_check",
+]
+
+[[package]]
+name = "event"
+version = "0.1.0"
+dependencies = [
+ "actix",
+ "bincode",
+ "bytes",
+ "serde",
+ "tokio-util",
 ]
 
 [[package]]

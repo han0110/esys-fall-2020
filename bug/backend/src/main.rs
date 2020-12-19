@@ -1,6 +1,6 @@
 use actix_web::rt::{self as actix_rt};
 use backend::{
-    actor::{audio_server, db},
+    actor::{audio_server, db, event_server},
     server,
 };
 use structopt::StructOpt;
@@ -11,6 +11,8 @@ pub struct Config {
     db: db::Config,
     #[structopt(flatten)]
     audio_server: audio_server::Config,
+    #[structopt(flatten)]
+    event_server: event_server::Config,
     #[structopt(flatten)]
     server: server::Config,
 }
@@ -24,6 +26,9 @@ async fn main() -> anyhow::Result<()> {
 
     // create actor AudioServer
     config.audio_server.build(database_addr.clone())?;
+
+    // create actor EventServer
+    config.event_server.build(database_addr.clone())?;
 
     // create Server
     let server = config.server.build(database_addr.clone())?;
