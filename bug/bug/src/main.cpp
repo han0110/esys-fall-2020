@@ -1,31 +1,31 @@
 #include "bug_event.h"
-#include "bug_event_client.h"
+#include "client_bug_event.h"
 #include "logger.h"
 #include "mbed.h"
 #include "wifi.h"
 
-using namespace std::chrono;
+class App : public WIFI, public BugEventClient {
+ public:
+  App() : WIFI(), BugEventClient(this) { log_infoln("app inited"); }
+
+  ~App() {
+    // join each thread (in reverse order)
+    BugEventClient::join();
+    WIFI::join();
+
+    log_infoln("app stopped");
+  }
+
+  void run() {
+    // start each thread
+    WIFI::start();
+    BugEventClient::start();
+
+    log_infoln("app started");
+  }
+};
 
 int main() {
-  WIFI wifi;
-  BugEventClient client(wifi.interface());
-
-  // connect to wifi until success
-  while (wifi.connect() < 0) {
-    // wait for 10 second to connect again
-    rtos::ThisThread::sleep_for(10s);
-  }
-
-  // start thread to run dispatch_forever
-  client.start();
-
-  while (true) {
-    // send something and sleep
-    time_t now = time(NULL);
-    client.send(Luminosity{from : 10, to : 800}, now);
-    rtos::ThisThread::sleep_for(std::chrono::milliseconds(3s));
-  }
-
-  // join thread
-  client.join();
+  App app;
+  app.run();
 }

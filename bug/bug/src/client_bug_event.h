@@ -7,19 +7,25 @@
 #include "logger.h"
 #include "logger_netsocket.h"
 #include "mbed.h"
+#include "wifi.h"
 
 class BugEventClient : public TCPClient {
   typedef BugEventClient Self;
 
  public:
-  BugEventClient(NetworkInterface* interface,
+  BugEventClient(WIFI* wifi,
                  SocketAddress server_address =
                      SocketAddress(MBED_CONF_APP_BUG_BACKEND_SERVER_IP,
                                    MBED_CONF_APP_BUG_BACKEND_SERVER_PORT),
                  uint32_t secret = MBED_CONF_APP_BUG_CLIENT_SECRET)
-      : TCPClient(interface, server_address),
+      : TCPClient(wifi, server_address),
         _thread(new rtos::Thread),
         _codec(new BugEventCodec(secret)) {}
+
+  ~BugEventClient() {
+    delete _thread;
+    delete _codec;
+  }
 
   void send(BugEventKind kind, time_t ts) {
     uint8_t* buf = new uint8_t[128];
@@ -27,11 +33,27 @@ class BugEventClient : public TCPClient {
     TCPClient::send(buf, len);
   }
 
+ protected:
   void start() {
     _thread->start(mbed::callback(this, &Self::dispatch_forever));
   }
 
   void join() { _thread->join(); }
+
+  int handle_response() {
+    uint8_t buf[1] = {0};
+
+    auto ns_ret = TCPSocket::recv(buf, 1);
+    if (ns_ret < 0) {
+      return ns_ret;
+    }
+
+    if (*buf != 1) {
+      return -1;
+    }
+
+    return 0;
+  }
 
  private:
   rtos::Thread* _thread;
