@@ -10,8 +10,14 @@ set(APP_TARGET bug)
 include(${MBED_PATH}/tools/cmake/app.cmake)
 
 add_subdirectory(${MBED_PATH})
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/driver/bsp-stm32l475)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/driver/wifi-ism43362)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/driver/ntp-client)
+# NOTE: workaround for NTPClient.cpp include path
+target_include_directories(ntp-client
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/driver
+)
 
 add_executable(${APP_TARGET})
 
@@ -23,16 +29,13 @@ mbed_set_mbed_target_linker_script(${APP_TARGET})
 
 project(${APP_TARGET})
 
-# Provide Mbed OS with the header file it needs to configure Mbed TLS for LoRa
 target_include_directories(${APP_TARGET}
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/driver
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_sources(${APP_TARGET}
     PRIVATE
-        config.h
         src/main.cpp
 )
 
@@ -40,6 +43,7 @@ target_link_libraries(${APP_TARGET}
     PRIVATE
         mbed-os
         mbed-netsocket
+        bsp-stm32l475
         wifi-ism43362
         ntp-client
 )

@@ -93,7 +93,7 @@ class TCPClient : protected TCPSocket {
   void send_callback(uint8_t* buf, int len) {
     log_debugln("send_callback");
 
-    nsapi_size_or_error_t ns_ret;
+    nsapi_size_or_error_t ns_ret = 0;
 
     // check whether remote socket is connected
     if (!connected()) {
