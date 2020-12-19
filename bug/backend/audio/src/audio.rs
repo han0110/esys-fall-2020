@@ -15,6 +15,7 @@ pub enum Audio<S>
 where
     S: Copy + Default,
 {
+    Handshake,
     Spec(Spec),
     WavChunk(WavChunk<S>),
     WavEnd { id: Uuid },

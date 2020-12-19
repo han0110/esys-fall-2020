@@ -8,7 +8,6 @@ use num_cpus;
 use structopt::StructOpt;
 
 pub mod event;
-pub mod log;
 pub mod user;
 
 #[derive(Debug, Clone, StructOpt)]

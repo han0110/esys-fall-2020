@@ -33,7 +33,7 @@ where
     S: Sample,
 {
     pub open_threshold: S,
-    pub release_time: usize,
+    pub release_sample_count: usize,
     state: State,
 }
 
@@ -41,10 +41,10 @@ impl<S> NoiseGate<S>
 where
     S: Sample,
 {
-    pub fn new(open_threshold: S, release_time: usize) -> Self {
+    pub fn new(open_threshold: S, release_sample_count: usize) -> Self {
         NoiseGate {
             open_threshold,
-            release_time,
+            release_sample_count,
             state: State::Closed,
         }
     }
@@ -82,20 +82,22 @@ where
             State::Open => {
                 if below_threshold(sample, self.open_threshold) {
                     State::Closing {
-                        remaining_samples: self.release_time,
+                        remaining_sample_count: self.release_sample_count,
                     }
                 } else {
                     State::Open
                 }
             }
 
-            State::Closing { remaining_samples } => {
+            State::Closing {
+                remaining_sample_count,
+            } => {
                 if below_threshold(sample, self.open_threshold) {
-                    if remaining_samples == 0 {
+                    if remaining_sample_count == 0 {
                         State::Closed
                     } else {
                         State::Closing {
-                            remaining_samples: remaining_samples - 1,
+                            remaining_sample_count: remaining_sample_count - 1,
                         }
                     }
                 } else {
@@ -117,7 +119,7 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum State {
     Open,
-    Closing { remaining_samples: usize },
+    Closing { remaining_sample_count: usize },
     Closed,
 }
 
@@ -161,10 +163,10 @@ mod tests {
     }
 
     test_state_transition!(open_to_open: State::Open, 101 => State::Open);
-    test_state_transition!(open_to_closing: State::Open, 40 => State::Closing { remaining_samples: RELEASE_TIME });
-    test_state_transition!(closing_to_closed: State::Closing { remaining_samples: 0 }, 40 => State::Closed);
-    test_state_transition!(closing_to_closing: State::Closing { remaining_samples: 1 }, 40 => State::Closing { remaining_samples: 0 });
-    test_state_transition!(reopen_when_closing: State::Closing { remaining_samples: 1 }, 101 => State::Open);
+    test_state_transition!(open_to_closing: State::Open, 40 => State::Closing { remaining_sample_count: RELEASE_TIME });
+    test_state_transition!(closing_to_closed: State::Closing { remaining_sample_count: 0 }, 40 => State::Closed);
+    test_state_transition!(closing_to_closing: State::Closing { remaining_sample_count: 1 }, 40 => State::Closing { remaining_sample_count: 0 });
+    test_state_transition!(reopen_when_closing: State::Closing { remaining_sample_count: 1 }, 101 => State::Open);
     test_state_transition!(closed_to_closed: State::Closed, 40 => State::Closed);
     test_state_transition!(closed_to_open: State::Closed, 101 => State::Open);
 }

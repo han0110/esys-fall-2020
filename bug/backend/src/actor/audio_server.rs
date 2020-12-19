@@ -51,12 +51,12 @@ impl Config {
         let (sink, stream) = UdpFramed::new(socket, BytesCodec::new()).split();
 
         Ok(AudioServer::create(|ctx| {
+            ctx.add_message_stream(SignalStream::new());
             ctx.add_stream(stream.filter_map(
                 |item: std::io::Result<(BytesMut, SocketAddr)>| async {
                     item.map(move |(data, addr)| UdpStream(data, addr)).ok()
                 },
             ));
-            ctx.add_message_stream(SignalStream::new());
             AudioServer {
                 port: self.audio_server_port,
                 wav_directory,
@@ -116,8 +116,13 @@ impl StreamHandler<UdpStream> for AudioServer {
                     self.writers.insert(client_addr, writer);
                 }
                 Ok(_) => {
-                    // Send empty packet to request spec of client
-                    self.sink.write((Bytes::new(), client_addr));
+                    // Send handshake to request spec of client
+                    self.sink.write((
+                        bincode::serialize(&audio::Audio::<f32>::Handshake)
+                            .unwrap()
+                            .into(),
+                        client_addr,
+                    ));
                 }
                 Err(_) => {
                     // TODO: warning

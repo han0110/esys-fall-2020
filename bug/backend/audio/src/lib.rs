@@ -1,5 +1,5 @@
 mod audio;
-pub use audio::*;
+pub use crate::audio::*;
 
 mod codec;
 pub use crate::codec::AudioCodec;
