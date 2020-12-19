@@ -4,6 +4,8 @@
 // Uncomment to enable debug message
 // #define LOG_LEVEL_DEBUG
 
+#define MBED_CONF_APP_SOCKET_TIMEOUT 5 * 1000  // 5 second
+
 // TODO: Uncomment to configure wifi
 // #define MBED_CONF_APP_WIFI_SSID
 // #define MBED_CONF_APP_WIFI_PASSWORD

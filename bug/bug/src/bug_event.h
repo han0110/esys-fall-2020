@@ -37,7 +37,7 @@ using BugEventKind = variant<Luminosity, Position>;
 
 class BugEventCodec {
  public:
-  BugEventCodec(uint64_t secret) : _secret(secret) {}
+  BugEventCodec(uint32_t secret) : _secret(secret) {}
 
   uint encode(uint8_t* buf, BugEventKind kind, time_t ts) {
     encode_little_endian_4(buf, 0, ts);
