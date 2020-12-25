@@ -9,6 +9,8 @@
 #include "mbed.h"
 #include "wifi.h"
 
+#define BUG_SERVER_RESPONSE_OK 1
+
 class BugEventClient : public TCPClient {
   typedef BugEventClient Self;
 
@@ -27,9 +29,9 @@ class BugEventClient : public TCPClient {
     delete _codec;
   }
 
-  void send(BugEventKind kind, time_t ts) {
+  void send(BugEventKind kind, TimeRange& tr) {
     uint8_t* buf = new uint8_t[128];
-    int len = _codec->encode(buf, kind, ts);
+    int len = _codec->encode(buf, kind, tr);
     TCPClient::send(buf, len);
   }
 
@@ -48,7 +50,7 @@ class BugEventClient : public TCPClient {
       return ns_ret;
     }
 
-    if (*buf != 1) {
+    if (*buf != BUG_SERVER_RESPONSE_OK) {
       return -1;
     }
 

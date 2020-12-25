@@ -16,7 +16,8 @@ pub enum EventKind {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Event {
-    pub timestamp: u32,
+    pub started_at: u32,
+    pub ended_at: u32,
     pub secret: u32,
     pub kind: EventKind,
 }
@@ -38,12 +39,14 @@ mod tests {
     test_serialize!(
         luminosity,
         Event {
-            timestamp: 1608119495,
+            started_at: 1608119495,
+            ended_at: 1608123495,
             secret: 12345678,
             kind: EventKind::Luminosity { from: 10, to: 800 },
         },
         vec![
-            199, 244, 217, 95, // timestamp
+            199, 244, 217, 95, // started_at
+            103, 4, 218, 95, // ended_at
             78, 97, 188, 0, // secret
             0, 0, 0, 0, // kind
             10, 0, 0, 0, // from
@@ -53,7 +56,8 @@ mod tests {
     test_serialize!(
         position,
         Event {
-            timestamp: 1608119495,
+            started_at: 1608119495,
+            ended_at: 1608123495,
             secret: 12345678,
             kind: EventKind::Position {
                 from: (0, 3, 12),
@@ -61,7 +65,8 @@ mod tests {
             },
         },
         vec![
-            199, 244, 217, 95, // timestamp
+            199, 244, 217, 95, // started_at
+            103, 4, 218, 95, // ended_at
             78, 97, 188, 0, // secret
             1, 0, 0, 0, // kind
             0, 0, 0, 0, // from x
